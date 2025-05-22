@@ -73,11 +73,10 @@ namespace UnityEssentials.Tests
         }
 
         [Test]
-        public void Constructor_WithInvalidCapacity_Throws()
+        public void ConstructorWithInvalidCapacityThrows()
         {
             Assert.Throws<System.ArgumentException>(() => new ManagedArray<TestStruct>(0));
         }
-
 
         [Test]
         public void ZeroAllocationCheck()
