@@ -1,46 +1,65 @@
 using System;
 
-public struct ManagedArray<T> where T : struct
+namespace UnityEssentials
 {
-    public T[] Items;
-    public int Count;
-
-    public int[] NextFree;
-    public int FreeHead;
-
-    public ManagedArray(int capacity)
+    public struct ManagedArray<T> where T : struct
     {
-        Items = new T[capacity];
-        NextFree = new int[capacity];
-        Count = 0;
-        FreeHead = -1;
-    }
+        public T[] Elements;
+        public int Count { get; private set; }
 
-    public int Add(T item)
-    {
-        int index;
-        if (FreeHead >= 0)
+        private int[] _nextFree;
+        private int _freeHead;
+
+        public ManagedArray(int capacity = 256)
         {
-            index = FreeHead;
-            FreeHead = NextFree[index];
-        }
-        else
-        {
-            if (Count >= Items.Length)
-            {
-                Array.Resize(ref Items, Items.Length * 2);
-                Array.Resize(ref NextFree, Items.Length);
-            }
-            index = Count++;
-        }
-        Items[index] = item;
-        return index;
-    }
+            if (capacity < 1)
+                throw new ArgumentException("Capacity must be at least 1.", nameof(capacity));
 
-    public void RemoveAt(int index)
-    {
-        if (index < 0 || index >= Count) return;
-        NextFree[index] = FreeHead;
-        FreeHead = index;
+            Elements = new T[capacity];
+            _nextFree = new int[capacity];
+            for (int i = 0; i < capacity - 1; i++)
+                _nextFree[i] = i + 1;
+            _nextFree[capacity - 1] = -1;
+            _freeHead = 0;
+            Count = 0;
+        }
+
+        public ref T Get(out int index)
+        {
+            if (_freeHead == -1)
+                Resize();
+
+            index = _freeHead;
+            _freeHead = _nextFree[index];
+            Count++;
+            return ref Elements[index];
+        }
+
+        public void Return(int index)
+        {
+            if (index < 0 || index >= Elements.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            if (Count <= 0)
+                throw new InvalidOperationException("No elements to return.");
+
+            _nextFree[index] = _freeHead;
+            _freeHead = index;
+            Count--;
+        }
+
+        private void Resize()
+        {
+            int oldCapacity = Elements.Length;
+            int newCapacity = oldCapacity + (oldCapacity / 2);
+
+            Array.Resize(ref Elements, newCapacity);
+            Array.Resize(ref _nextFree, newCapacity);
+
+            for (int i = oldCapacity; i < newCapacity; i++)
+                _nextFree[i] = i + 1;
+
+            _nextFree[newCapacity - 1] = -1;
+            _freeHead = oldCapacity;
+        }
     }
 }
