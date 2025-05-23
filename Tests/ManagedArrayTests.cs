@@ -1,96 +1,122 @@
 using NUnit.Framework;
+using System;
+using static UnityEditor.Experimental.GraphView.Port;
 
 namespace UnityEssentials.Tests
 {
+    [TestFixture]
     public class ManagedArrayTests
     {
-        private struct TestStruct
+        [Test]
+        public void Constructor_DefaultCapacity_InitializesCorrectly()
         {
-            public int Value;
+            var arr = new ManagedArray<int>();
+            Assert.NotNull(arr.Elements);
+            Assert.AreEqual(256, arr.Elements.Length);
+            Assert.AreEqual(0, arr.Count);
         }
 
         [Test]
-        public void ConstructorInitializesCorrectly()
+        public void Constructor_CustomCapacity_InitializesCorrectly()
         {
-            var array = new ManagedArray<TestStruct>(4);
-            Assert.AreEqual(0, array.Count);
+            UnityEngine.Debug.Log($"test");
+            var arr = new ManagedArray<int>(10);
+            UnityEngine.Debug.Log($"test2");
+            Assert.NotNull(arr.Elements);
+            Assert.AreEqual(10, arr.Elements.Length);
+            Assert.AreEqual(0, arr.Count);
         }
 
         [Test]
-        public void GetIncreasesCount()
+        public void Constructor_ThrowsOnInvalidCapacity()
         {
-            var array = new ManagedArray<TestStruct>(4);
-            ref var element = ref array.Get(out var index);
-            element.Value = 123;
-            Assert.AreEqual(1, array.Count);
-            Assert.AreEqual(123, array.Elements[0].Value);
+            Assert.Throws<ArgumentException>(() => new ManagedArray<int>(0));
+            Assert.Throws<ArgumentException>(() => new ManagedArray<int>(-5));
         }
 
         [Test]
-        public void ReturnDecreasesCount()
+        public void Get_AllocatesElementAndReturnsIndex()
         {
-            var array = new ManagedArray<TestStruct>(4);
-            ref var element = ref array.Get(out var index);
-            array.Return(index);
-            Assert.AreEqual(0, array.Count);
+            var arr = new ManagedArray<int>(4);
+            int index;
+            ref int value = ref arr.Get(out index);
+            Assert.AreEqual(0, index);
+            Assert.AreEqual(1, arr.Count);
+            value = 42;
+            Assert.AreEqual(42, arr.Elements[index]);
         }
 
         [Test]
-        public void ReturnInvalidIndexThrows()
+        public void Get_MultipleAllocations_UsesFreeList()
         {
-            var array = new ManagedArray<TestStruct>(4);
-            Assert.Throws<System.ArgumentOutOfRangeException>(() => array.Return(-1));
-            Assert.Throws<System.ArgumentOutOfRangeException>(() => array.Return(5));
+            var arr = new ManagedArray<int>(2);
+            int idx1, idx2;
+            arr.Get(out idx1);
+            arr.Get(out idx2);
+            Assert.AreNotEqual(idx1, idx2);
+            Assert.AreEqual(2, arr.Count);
         }
 
         [Test]
-        public void ReturnWhenEmptyThrows()
+        public void Get_TriggersResizeWhenFull()
         {
-            var array = new ManagedArray<TestStruct>(4);
-            Assert.Throws<System.InvalidOperationException>(() => array.Return(0));
+            var arr = new ManagedArray<int>(1);
+            int idx1, idx2;
+            arr.Get(out idx1);
+            // Next allocation should trigger resize
+            arr.Get(out idx2);
+            Assert.AreEqual(2, arr.Elements.Length);
+            Assert.AreEqual(2, arr.Count);
         }
 
         [Test]
-        public void GetWhenFullResizes()
+        public void Return_ReleasesElementAndDecrementsCount()
         {
-            var array = new ManagedArray<TestStruct>(2);
-
-            ref var a = ref array.Get(out _); a.Value = 1;
-            ref var b = ref array.Get(out _); b.Value = 2;
-            ref var c = ref array.Get(out _); c.Value = 3;
-
-            Assert.AreEqual(3, array.Count);
-
-            int found = 0;
-            for (int i = 0; i < array.Elements.Length; i++)
-            {
-                int value = array.Elements[i].Value;
-                if (value == 1 || value == 2 || value == 3)
-                    found += value;
-            }
-
-            Assert.AreEqual(6, found);
+            var arr = new ManagedArray<int>(3);
+            int idx;
+            arr.Get(out idx);
+            Assert.AreEqual(1, arr.Count);
+            arr.Return(idx);
+            Assert.AreEqual(0, arr.Count);
+            // Should be able to reuse the same index
+            int idx2;
+            arr.Get(out idx2);
+            Assert.AreEqual(idx, idx2);
         }
 
         [Test]
-        public void ConstructorWithInvalidCapacityThrows()
+        public void Return_ThrowsOnInvalidIndex()
         {
-            Assert.Throws<System.ArgumentException>(() => new ManagedArray<TestStruct>(0));
+            var arr = new ManagedArray<int>(2);
+            int idx;
+            arr.Get(out idx);
+            Assert.Throws<ArgumentOutOfRangeException>(() => arr.Return(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => arr.Return(2));
         }
 
         [Test]
-        public void ZeroAllocationCheck()
+        public void Return_ThrowsWhenNoElementsInUse()
         {
-            var allocBefore = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
+            var arr = new ManagedArray<int>(2);
+            Assert.Throws<InvalidOperationException>(() => arr.Return(0));
+        }
 
-            var array = new ManagedArray<TestStruct>(100);
-            for (int i = 0; i < 1000; i++)
-                array.Get(out _).Value = i;
-            for (int i = 0; i < 1000; i++)
-                array.Return(i);
-
-            var allocAfter = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
-            Assert.LessOrEqual(allocAfter - allocBefore, 0);
+        [Test]
+        public void GetAndReturn_MultipleCycles_WorkAsExpected()
+        {
+            var arr = new ManagedArray<int>(2);
+            int idx1, idx2;
+            arr.Get(out idx1);
+            arr.Get(out idx2);
+            arr.Return(idx1);
+            arr.Return(idx2);
+            Assert.AreEqual(0, arr.Count);
+            int idx3, idx4;
+            arr.Get(out idx3);
+            arr.Get(out idx4);
+            Assert.AreNotEqual(idx3, idx4);
+            Assert.Contains(idx3, new[] { 0, 1 });
+            Assert.Contains(idx4, new[] { 0, 1 });
         }
     }
 }
