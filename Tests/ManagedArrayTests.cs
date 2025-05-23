@@ -1,6 +1,5 @@
 using NUnit.Framework;
 using System;
-using static UnityEditor.Experimental.GraphView.Port;
 
 namespace UnityEssentials.Tests
 {
@@ -10,21 +9,19 @@ namespace UnityEssentials.Tests
         [Test]
         public void Constructor_DefaultCapacity_InitializesCorrectly()
         {
-            var arr = new ManagedArray<int>();
-            Assert.NotNull(arr.Elements);
-            Assert.AreEqual(256, arr.Elements.Length);
-            Assert.AreEqual(0, arr.Count);
+            var array = new ManagedArray<int>();
+            Assert.NotNull(array.Elements);
+            Assert.AreEqual(256, array.Elements.Length);
+            Assert.AreEqual(0, array.Count);
         }
 
         [Test]
         public void Constructor_CustomCapacity_InitializesCorrectly()
         {
-            UnityEngine.Debug.Log($"test");
-            var arr = new ManagedArray<int>(10);
-            UnityEngine.Debug.Log($"test2");
-            Assert.NotNull(arr.Elements);
-            Assert.AreEqual(10, arr.Elements.Length);
-            Assert.AreEqual(0, arr.Count);
+            var array = new ManagedArray<int>(10);
+            Assert.NotNull(array.Elements);
+            Assert.AreEqual(10, array.Elements.Length);
+            Assert.AreEqual(0, array.Count);
         }
 
         [Test]
@@ -37,86 +34,78 @@ namespace UnityEssentials.Tests
         [Test]
         public void Get_AllocatesElementAndReturnsIndex()
         {
-            var arr = new ManagedArray<int>(4);
-            int index;
-            ref int value = ref arr.Get(out index);
+            var array = new ManagedArray<int>(4);
+            ref int value = ref array.Get(out var index);
             Assert.AreEqual(0, index);
-            Assert.AreEqual(1, arr.Count);
+            Assert.AreEqual(1, array.Count);
             value = 42;
-            Assert.AreEqual(42, arr.Elements[index]);
+            Assert.AreEqual(42, array.Elements[index]);
         }
 
         [Test]
         public void Get_MultipleAllocations_UsesFreeList()
         {
-            var arr = new ManagedArray<int>(2);
-            int idx1, idx2;
-            arr.Get(out idx1);
-            arr.Get(out idx2);
-            Assert.AreNotEqual(idx1, idx2);
-            Assert.AreEqual(2, arr.Count);
+            var array = new ManagedArray<int>(2);
+            array.Get(out var index1);
+            array.Get(out var index2);
+            Assert.AreNotEqual(index1, index2);
+            Assert.AreEqual(2, array.Count);
         }
 
         [Test]
         public void Get_TriggersResizeWhenFull()
         {
-            var arr = new ManagedArray<int>(1);
-            int idx1, idx2;
-            arr.Get(out idx1);
+            var array = new ManagedArray<int>(1);
+            array.Get(out var index1);
             // Next allocation should trigger resize
-            arr.Get(out idx2);
-            Assert.AreEqual(2, arr.Elements.Length);
-            Assert.AreEqual(2, arr.Count);
+            array.Get(out var index2);
+            Assert.AreEqual(2, array.Elements.Length);
+            Assert.AreEqual(2, array.Count);
         }
 
         [Test]
         public void Return_ReleasesElementAndDecrementsCount()
         {
-            var arr = new ManagedArray<int>(3);
-            int idx;
-            arr.Get(out idx);
-            Assert.AreEqual(1, arr.Count);
-            arr.Return(idx);
-            Assert.AreEqual(0, arr.Count);
+            var array = new ManagedArray<int>(3);
+            array.Get(out var index);
+            Assert.AreEqual(1, array.Count);
+            array.Return(index);
+            Assert.AreEqual(0, array.Count);
             // Should be able to reuse the same index
-            int idx2;
-            arr.Get(out idx2);
-            Assert.AreEqual(idx, idx2);
+            array.Get(out var index2);
+            Assert.AreEqual(index, index2);
         }
 
         [Test]
         public void Return_ThrowsOnInvalidIndex()
         {
-            var arr = new ManagedArray<int>(2);
-            int idx;
-            arr.Get(out idx);
-            Assert.Throws<ArgumentOutOfRangeException>(() => arr.Return(-1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => arr.Return(2));
+            var array = new ManagedArray<int>(2);
+            array.Get(out var index);
+            Assert.Throws<ArgumentOutOfRangeException>(() => array.Return(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => array.Return(2));
         }
 
         [Test]
         public void Return_ThrowsWhenNoElementsInUse()
         {
-            var arr = new ManagedArray<int>(2);
-            Assert.Throws<InvalidOperationException>(() => arr.Return(0));
+            var array = new ManagedArray<int>(2);
+            Assert.Throws<InvalidOperationException>(() => array.Return(0));
         }
 
         [Test]
         public void GetAndReturn_MultipleCycles_WorkAsExpected()
         {
-            var arr = new ManagedArray<int>(2);
-            int idx1, idx2;
-            arr.Get(out idx1);
-            arr.Get(out idx2);
-            arr.Return(idx1);
-            arr.Return(idx2);
-            Assert.AreEqual(0, arr.Count);
-            int idx3, idx4;
-            arr.Get(out idx3);
-            arr.Get(out idx4);
-            Assert.AreNotEqual(idx3, idx4);
-            Assert.Contains(idx3, new[] { 0, 1 });
-            Assert.Contains(idx4, new[] { 0, 1 });
+            var array = new ManagedArray<int>(2);
+            array.Get(out var index1);
+            array.Get(out var index2);
+            array.Return(index1);
+            array.Return(index2);
+            Assert.AreEqual(0, array.Count);
+            array.Get(out var index3);
+            array.Get(out var index4);
+            Assert.AreNotEqual(index3, index4);
+            Assert.Contains(index3, new[] { 0, 1 });
+            Assert.Contains(index4, new[] { 0, 1 });
         }
     }
 }
