@@ -1,10 +1,10 @@
 {
-  "name": "com.unityessentials.managedarray",
-  "version": "1.0.0",
-  "displayName": "Unity Types ManagedArray",
+  "name": "com.unityessentials.types.managedarray",
+  "version": "2.0.0",
+  "displayName": "Types ManagedArray",
   "description": "This is a part of the UnityEssentials Ecosystem",
   "unity": "6000.0",
-  "unityRelease": null,
+  "unityRelease": "",
   "dependencies": {},
   "keywords": [],
   "author": {
