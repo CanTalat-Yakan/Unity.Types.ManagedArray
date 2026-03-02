@@ -1,12 +1,13 @@
 {
   "name": "com.unityessentials.types.managedarray",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "displayName": "Types ManagedArray",
   "description": "This is a part of the UnityEssentials Ecosystem",
   "unity": "6000.0",
   "unityRelease": "",
+  "resolutionStrategy": "highestPatch",
   "dependencies": {
-    "com.unity.test-framework": "~1.6.0"
+    "com.unity.test-framework": "1.6.0"
   },
   "keywords": [],
   "author": {
